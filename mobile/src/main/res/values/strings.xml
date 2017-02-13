@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">IP Droid Camera</string>
+
+    <string name="selectDevice">Select a device to stream to</string>
+    <string name="pairedDevices">Paired Devices</string>
+    <string name="availableDevices">Available Devices</string>
+
 </resources>

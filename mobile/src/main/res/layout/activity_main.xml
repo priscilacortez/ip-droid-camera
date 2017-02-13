@@ -9,10 +9,45 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin"
-    tools:context="com.priscilacortez.ipdroidcamera.MainActivity">
+    tools:context="com.priscilacortez.ipdroidcamera.DeviceSelectActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/selectDevice"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:scrollbars="vertical">
+
+            <TextView
+                android:id="@+id/tv_paired_devices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/pairedDevices"/>
+
+            <ListView
+                android:id="@+id/lv_paired_devices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"></ListView>
+
+            <TextView
+                android:id="@+id/tv_available_devices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/availableDevices"/>
+
+            <ListView
+                android:id="@+id/lv_available_devices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"></ListView>
+        </LinearLayout>
+    </LinearLayout>
 </RelativeLayout>
