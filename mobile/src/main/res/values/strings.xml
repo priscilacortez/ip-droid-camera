@@ -4,5 +4,6 @@
     <string name="selectDevice">Select a device to stream to</string>
     <string name="pairedDevices">Paired Devices</string>
     <string name="availableDevices">Available Devices</string>
+    <string name="action_scan">Scan</string>
 
 </resources>
