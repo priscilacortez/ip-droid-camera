@@ -16,10 +16,11 @@
 
     <style name="title">
         <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
     <style name="subtitle">
-        <item name="android:textStyle">bold</item>
+        <item name="android:background">@color/colorLightGray</item>
     </style>
 
 </resources>
