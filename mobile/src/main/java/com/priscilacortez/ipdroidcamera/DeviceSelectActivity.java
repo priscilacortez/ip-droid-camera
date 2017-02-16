@@ -19,12 +19,14 @@ import android.view.Window;
 import android.widget.ListView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.*;
 
 public class DeviceSelectActivity extends AppCompatActivity {
 
     private ArrayList<BluetoothDevice> availableDevicesList, pairedDevicesList;
+    private HashSet<String> availableDevicesSet;
     private ListView availableDevicesListView, pairedDevicesListView;
     private BluetoothAdapter bluetoothAdapter;
     private MenuItem scanActionButton;
@@ -33,6 +35,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private DeviceListBaseAdapter availableDevicesListAdapter;
 
     private final static int REQUEST_ENABLE_BT = 1;
+    private final static int REQUEST_ACCESS_COARSE_LOCATION = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +57,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
         availableDevicesListView = (ListView) findViewById(R.id.lv_available_devices);
         availableDevicesList = new ArrayList<BluetoothDevice>();
+        availableDevicesSet = new HashSet<String>();
         availableDevicesListAdapter = new DeviceListBaseAdapter(this, availableDevicesList);
         availableDevicesListView.setAdapter(availableDevicesListAdapter);
         // TODO: ADD setOnItemClickListener
@@ -119,7 +123,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         pairedDevicesList.clear();
         pairedDevicesListAdapter.notifyDataSetChanged();
 
-        // Show already paired devices in the upper list
+        // Show already paired devices
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         if(pairedDevices.size() > 0){
             findViewById(R.id.tv_paired_devices).setVisibility(View.VISIBLE);
@@ -130,8 +134,15 @@ public class DeviceSelectActivity extends AppCompatActivity {
             pairedDevicesListAdapter.notifyDataSetChanged();
         }
 
+        availableDevicesSet.clear();
         availableDevicesList.clear();
         availableDevicesListAdapter.notifyDataSetChanged();
+
+        // Request permission on runtime
+        ActivityCompat.requestPermissions(this,
+                new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION},
+                REQUEST_ACCESS_COARSE_LOCATION);
+
 
         bluetoothAdapter.startDiscovery();
     }
@@ -164,10 +175,13 @@ public class DeviceSelectActivity extends AppCompatActivity {
             if(BluetoothDevice.ACTION_FOUND.equals(action)){
                 // Found a device in range
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                System.out.println("DEVICE NAME: " + device.getName());
+                System.out.println("DEVICE TYPE: " +  Integer.toString(device.getType()));
 
-                // If not paired add to list
-                if(device.getBondState() != BluetoothDevice.BOND_BONDED){
+                // If not paired, has a name and not already in list, add to list
+                if(device.getBondState() != BluetoothDevice.BOND_BONDED && device.getName() != null && !availableDevicesSet.contains(device.getAddress())){
                     availableDevicesList.add(device);
+                    availableDevicesSet.add(device.getAddress());
                     availableDevicesListAdapter.notifyDataSetChanged();
                     findViewById(R.id.tv_available_devices).setVisibility(View.VISIBLE);
                 }
@@ -180,6 +194,12 @@ public class DeviceSelectActivity extends AppCompatActivity {
             }
         }
     };
+
+    protected void onDestroy(){
+        super.onDestroy();
+
+        unregisterReceiver(Receiver);
+    }
 
 
 }
