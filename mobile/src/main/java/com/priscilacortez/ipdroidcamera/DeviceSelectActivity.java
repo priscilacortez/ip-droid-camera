@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -19,6 +20,7 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.jar.*;
 
 public class DeviceSelectActivity extends AppCompatActivity {
 
@@ -29,6 +31,8 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private Menu menu;
     private DeviceListBaseAdapter pairedDevicesListAdapter;
     private DeviceListBaseAdapter availableDevicesListAdapter;
+
+    private final static int REQUEST_ENABLE_BT = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +61,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         // TODO: Setup handler for setting up and managing bluetooth connections
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
         Set<BluetoothDevice> pairedDevicesSet = bluetoothAdapter.getBondedDevices();
         for(BluetoothDevice device : pairedDevicesSet){
             pairedDevicesList.add(device);
@@ -66,8 +71,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
         registerReceiver(Receiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
         registerReceiver(Receiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
 
-        //scanDevices();
-
     }
 
     public boolean onCreateOptionsMenu(Menu menu){
@@ -75,6 +78,10 @@ public class DeviceSelectActivity extends AppCompatActivity {
         inflater.inflate(R.menu.bluetooth_scan_action,menu);
         this.menu = menu;
         this.scanActionButton = menu.findItem(R.id.action_scan);
+
+        // After these toolbar has been initialized, begin scanning for devices
+        scanDevices();
+
         return true;
     }
 
@@ -99,6 +106,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         }
 
         // Show search progress spinner
+        // TODO: Fix progress bar
         setProgressBarIndeterminateVisibility(true);
 
         // Disable scan action button\
@@ -128,8 +136,21 @@ public class DeviceSelectActivity extends AppCompatActivity {
         bluetoothAdapter.startDiscovery();
     }
 
-    // TODO: COME BACK TO THIS
     public boolean hasBluetooth(){
+
+        // Check to see if bluetooth is supported
+        if (bluetoothAdapter == null){
+            return false;
+        }
+
+        // Check to see if bluetooth is on
+        if (!bluetoothAdapter.isEnabled()){
+            // If not, ask permission to turn it on
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            return false;
+        }
+
         return true;
     }
 
