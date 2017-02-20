@@ -1,27 +1,29 @@
 package com.priscilacortez.ipdroidcamera;
 
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.AdapterView.OnItemClickListener;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.jar.*;
 
 public class DeviceSelectActivity extends AppCompatActivity {
 
@@ -29,13 +31,15 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private HashSet<String> availableDevicesSet;
     private ListView availableDevicesListView, pairedDevicesListView;
     private BluetoothAdapter bluetoothAdapter;
+    private BluetoothStreamApp appState;
     private MenuItem scanActionButton;
     private Menu menu;
     private DeviceListBaseAdapter pairedDevicesListAdapter;
     private DeviceListBaseAdapter availableDevicesListAdapter;
+    private ProgressDialog progressDialog;
 
     private final static int REQUEST_ENABLE_BT = 1;
-    private final static int REQUEST_ACCESS_COARSE_LOCATION = 1;
+    private final static int REQUEST_ACCESS_COARSE_LOCATION = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +58,8 @@ public class DeviceSelectActivity extends AppCompatActivity {
         pairedDevicesListAdapter = new DeviceListBaseAdapter(this, pairedDevicesList);
         pairedDevicesListView.setAdapter(pairedDevicesListAdapter);
         // TODO: ADD setOnItemClickListener
+        pairedDevicesListView.setOnItemClickListener(deviceClickListener);
+
 
         availableDevicesListView = (ListView) findViewById(R.id.lv_available_devices);
         availableDevicesList = new ArrayList<BluetoothDevice>();
@@ -61,8 +67,10 @@ public class DeviceSelectActivity extends AppCompatActivity {
         availableDevicesListAdapter = new DeviceListBaseAdapter(this, availableDevicesList);
         availableDevicesListView.setAdapter(availableDevicesListAdapter);
         // TODO: ADD setOnItemClickListener
+        availableDevicesListView.setOnItemClickListener(deviceClickListener);
 
         // TODO: Setup handler for setting up and managing bluetooth connections
+        appState = (BluetoothStreamApp) getApplicationContext();
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -100,6 +108,28 @@ public class DeviceSelectActivity extends AppCompatActivity {
                 return super.onOptionsItemSelected(item);
         }
     }
+
+    final OnItemClickListener deviceClickListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            bluetoothAdapter.cancelDiscovery();
+            BluetoothDevice device = (BluetoothDevice) parent.getItemAtPosition(position);
+
+            // TODO: CONNECTION DIALOG AND MAKE IT SO THAT THE CONNECTION CAN BE CANCELLED
+            // Show connection dialog and allow connection to be cancelled
+            progressDialog = ProgressDialog.show(DeviceSelectActivity.this, "", "Estabilishing connection...", false, true);
+            progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    progressDialog.dismiss();
+                    appState.disconnect();
+                    // TODO: LOGS
+                }
+            });
+
+            appState.connect(device);
+        }
+    };
 
     public void scanDevices(){
 
@@ -169,14 +199,10 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private final BroadcastReceiver Receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            System.out.println("IN RECEIVER");
             String action = intent.getAction();
-            System.out.println("INTENT: " + action );
             if(BluetoothDevice.ACTION_FOUND.equals(action)){
                 // Found a device in range
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                System.out.println("DEVICE NAME: " + device.getName());
-                System.out.println("DEVICE TYPE: " +  Integer.toString(device.getType()));
 
                 // If not paired, has a name and not already in list, add to list
                 if(device.getBondState() != BluetoothDevice.BOND_BONDED && device.getName() != null && !availableDevicesSet.contains(device.getAddress())){
