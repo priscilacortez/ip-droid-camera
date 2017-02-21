@@ -11,15 +11,21 @@ import android.content.IntentFilter;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Message;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ListView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.Switch;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,9 +43,12 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private DeviceListBaseAdapter pairedDevicesListAdapter;
     private DeviceListBaseAdapter availableDevicesListAdapter;
     private ProgressDialog progressDialog;
+    private Switch bluetoothSwitch;
 
     private final static int REQUEST_ENABLE_BT = 1;
     private final static int REQUEST_ACCESS_COARSE_LOCATION = 2;
+    private final static int REQUEST_SWITCH_OFF = 3;
+    private String TAG = "Device Select Activity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +60,10 @@ public class DeviceSelectActivity extends AppCompatActivity {
         // set custom toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // set discoverability on
+        bluetoothSwitch = (Switch) findViewById(R.id.switch_bluetooth);
+        bluetoothSwitch.setOnCheckedChangeListener(switchChangeListener);
 
         // Setup Bluetooth devices list with custom rows
         pairedDevicesListView = (ListView) findViewById(R.id.lv_paired_devices);
@@ -82,6 +95,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         // Register a receiver to handle Bluetooth actions
         registerReceiver(Receiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
         registerReceiver(Receiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
+        registerReceiver(Receiver, new IntentFilter(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED));
 
     }
 
@@ -109,7 +123,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         }
     }
 
-    final OnItemClickListener deviceClickListener = new AdapterView.OnItemClickListener() {
+    final OnItemClickListener deviceClickListener = new OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
             bluetoothAdapter.cancelDiscovery();
@@ -117,7 +131,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
             // TODO: CONNECTION DIALOG AND MAKE IT SO THAT THE CONNECTION CAN BE CANCELLED
             // Show connection dialog and allow connection to be cancelled
-            progressDialog = ProgressDialog.show(DeviceSelectActivity.this, "", "Estabilishing connection...", false, true);
+            progressDialog = ProgressDialog.show(DeviceSelectActivity.this, "", "Establishing connection...", false, true);
             progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                 @Override
                 public void onCancel(DialogInterface dialog) {
@@ -126,14 +140,55 @@ public class DeviceSelectActivity extends AppCompatActivity {
                     // TODO: LOGS
                 }
             });
-
+            System.out.println("DEVICE: " + device.getName());
             appState.connect(device);
         }
     };
 
+    final OnCheckedChangeListener switchChangeListener = new OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            if (isChecked){
+                discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 200);
+                startActivity(discoverableIntent);
+                bluetoothSwitch.setClickable(false);
+            }
+        }
+    };
+
+    public boolean handleMessage(Message msg){
+        // In cas the connection dialog hasn't disappeared yet
+        if(progressDialog != null){
+            progressDialog.dismiss();
+        }
+
+        switch(msg.what) {
+            case BluetoothStreamApp.MSG_OK:
+                // The child activity ended gracefully
+                break;
+            case BluetoothStreamApp.MSG_CANCEL:
+                // The child activity did not end gracefully (connection lost, failed... )
+                if (msg.obj != null) {
+                    // If some text came with the message show in a toast
+                    Toast.makeText(DeviceSelectActivity.this, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case BluetoothStreamApp.MSG_CONNECTED:
+                // When connected to a device start the activity select
+                // TODO: STREAM VIDEO!! startActivity...
+                startActivityForResult(new Intent(getApplicationContext(), SendVideoStreamActivity.class),0);
+                break;
+        }
+
+        return false;
+
+    }
+
     public void scanDevices(){
 
         // Prevent phone without bluetooth from using application
+        Log.e(TAG, Boolean.toString(hasBluetooth()));
         if(!hasBluetooth()){
             finish();
             return;
@@ -149,6 +204,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
         // Remove title for available devices
         findViewById(R.id.tv_available_devices).setVisibility(View.GONE);
+        findViewById(R.id.tv_paired_devices).setVisibility(View.GONE);
 
         pairedDevicesList.clear();
         pairedDevicesListAdapter.notifyDataSetChanged();
@@ -163,6 +219,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
             pairedDevicesListAdapter.notifyDataSetChanged();
         }
+
 
         availableDevicesSet.clear();
         availableDevicesList.clear();
@@ -217,6 +274,15 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
                 scanActionButton.setTitle(getString(R.string.action_scan));
                 scanActionButton.setEnabled(true);
+            } else if(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)){
+                // Device had a change in discoverability
+                Bundle extras = intent.getExtras();
+                String key = extras.keySet().iterator().next();
+                // Check to see if it is no longer discoverable and then allow user to click on the switch again
+                if(extras.get(key).equals(BluetoothAdapter.SCAN_MODE_CONNECTABLE) || extras.get(key).equals(BluetoothAdapter.SCAN_MODE_NONE )){
+                    bluetoothSwitch.setClickable(true);
+                    bluetoothSwitch.performClick();
+                }
             }
         }
     };

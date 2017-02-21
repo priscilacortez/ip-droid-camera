@@ -6,5 +6,7 @@
     <string name="availableDevices">Available Devices</string>
     <string name="action_scan">Scan</string>
     <string name="scanning">Scanning</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
 
 </resources>
