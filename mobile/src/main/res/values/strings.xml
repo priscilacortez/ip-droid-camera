@@ -8,5 +8,6 @@
     <string name="scanning">Scanning</string>
     <string name="on">On</string>
     <string name="off">Off</string>
-
+    <string name="startClient">Stream Video</string>
+    <string name="startServer">Watch Video</string>
 </resources>

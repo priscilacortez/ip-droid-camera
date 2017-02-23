@@ -20,11 +20,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.widget.AdapterView;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ListView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -39,15 +36,12 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothStreamApp appState;
     private MenuItem scanActionButton;
-    private Menu menu;
     private DeviceListBaseAdapter pairedDevicesListAdapter;
     private DeviceListBaseAdapter availableDevicesListAdapter;
     private ProgressDialog progressDialog;
-    private Switch bluetoothSwitch;
 
     private final static int REQUEST_ENABLE_BT = 1;
     private final static int REQUEST_ACCESS_COARSE_LOCATION = 2;
-    private final static int REQUEST_SWITCH_OFF = 3;
     private String TAG = "Device Select Activity";
 
     @Override
@@ -55,15 +49,13 @@ public class DeviceSelectActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         // get spinner in upper right corner
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_device_select);
 
         // set custom toolbar
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        // set discoverability on
-        bluetoothSwitch = (Switch) findViewById(R.id.switch_bluetooth);
-        bluetoothSwitch.setOnCheckedChangeListener(switchChangeListener);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         // Setup Bluetooth devices list with custom rows
         pairedDevicesListView = (ListView) findViewById(R.id.lv_paired_devices);
@@ -102,7 +94,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu){
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.bluetooth_scan_action,menu);
-        this.menu = menu;
         this.scanActionButton = menu.findItem(R.id.action_scan);
 
         // After these toolbar has been initialized, begin scanning for devices
@@ -115,6 +106,9 @@ public class DeviceSelectActivity extends AppCompatActivity {
         switch(item.getItemId()){
             case R.id.action_scan:
                 scanDevices();
+                return true;
+            case android.R.id.home:
+                finish();
                 return true;
             default:
                 // User's action was not recognized
@@ -142,18 +136,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
             });
             System.out.println("DEVICE: " + device.getName());
             appState.connect(device);
-        }
-    };
-
-    final OnCheckedChangeListener switchChangeListener = new OnCheckedChangeListener() {
-        @Override
-        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            if (isChecked){
-                discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 200);
-                startActivity(discoverableIntent);
-                bluetoothSwitch.setClickable(false);
-            }
         }
     };
 
@@ -274,7 +256,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
                 scanActionButton.setTitle(getString(R.string.action_scan));
                 scanActionButton.setEnabled(true);
-            } else if(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)){
+            } /*else if(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)){
                 // Device had a change in discoverability
                 Bundle extras = intent.getExtras();
                 String key = extras.keySet().iterator().next();
@@ -283,7 +265,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
                     bluetoothSwitch.setClickable(true);
                     bluetoothSwitch.performClick();
                 }
-            }
+            }*/
         }
     };
 
