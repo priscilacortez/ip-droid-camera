@@ -3,13 +3,19 @@ package com.priscilacortez.ipdroidcamera;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
+import java.sql.Connection;
 import java.util.UUID;
 import android.app.Application;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.icu.util.Output;
+import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 public class BluetoothStreamApp extends Application {
@@ -24,11 +30,14 @@ public class BluetoothStreamApp extends Application {
     private long lastComm;
 
     // Member fields
+    private ConnectionThread connectionThread;
+    private AcceptThread acceptThread;
     private BluetoothThread bluetoothThread;
     private TimeoutThread timeoutThread;
     private Handler activityHandler;
     private int state;
     private boolean busy, stoppingConnection;
+    private BluetoothAdapter bluetoothAdapter;
 
     // Constants to indicate message contents
     public static final int MSG_OK = 0;
@@ -36,6 +45,7 @@ public class BluetoothStreamApp extends Application {
     public static final int MSG_WRITE = 2;
     public static final int MSG_CANCEL = 3;
     public static final int MSG_CONNECTED = 4;
+    public static final int MSG_TOAST = 5;
 
     // constants that indicate the current connection state
     private static final int STATE_NONE = 0;
@@ -45,10 +55,17 @@ public class BluetoothStreamApp extends Application {
     // General UUID constant
     private static String GENERAL_UUID = "00001101-0000-1000-8000-00805F9B34FB";
 
-
     public BluetoothStreamApp(){
         state = STATE_NONE;
         activityHandler = null;
+    }
+
+    /**
+     * Sets the bluetoothAdapter
+     * @param bluetoothAdapter: BluetoothAdapter
+     */
+    public void setBluetoothAdapter(BluetoothAdapter bluetoothAdapter){
+        this.bluetoothAdapter = bluetoothAdapter;
     }
 
     /**
@@ -97,10 +114,7 @@ public class BluetoothStreamApp extends Application {
         busy = false;
 
         // Cancel any thread currently running a connection
-        if(bluetoothThread != null){
-            bluetoothThread.cancel();
-            bluetoothThread = null;
-        }
+        closeAllThreads();
 
         setState(STATE_CONNECTING);
 
@@ -112,6 +126,30 @@ public class BluetoothStreamApp extends Application {
         timeoutThread = new TimeoutThread();
         timeoutThread.start();
 
+    }
+
+    public synchronized void startServer(){
+        stoppingConnection = false;
+        busy = false;
+
+        // Cancel any thread currently running a connection
+        closeAllThreads();
+
+        // Start the new server thread
+        acceptThread = new AcceptThread();
+        acceptThread.start();
+    }
+
+    private void closeAllThreads(){
+        if(bluetoothThread != null){
+            bluetoothThread.cancel();
+            bluetoothThread = null;
+        }
+
+        if(acceptThread != null){
+            acceptThread.cancel();
+            acceptThread = null;
+        }
     }
 
     /**
@@ -157,57 +195,14 @@ public class BluetoothStreamApp extends Application {
             // Send message to activity to inform of success
             sendMessage(MSG_CONNECTED, null);
 
-            // Get BluetoothSocket input and ouput streams
-            try {
-                inputStream = socket.getInputStream();
-                outputStream = socket.getOutputStream();
-            } catch (IOException e){
-                disconnect();
-                Log.e(TAG, "Failed to get streams", e);
-            }
-
-            byte[] buffer = new byte[1024];
-            byte ch;
-            int bytes;
-            String input;
-
             // Keep listening to the InputStream while connected
             // TODO: HERE I WANT SEND STUFF INSTEAD OF READING IT
-        }
-
-        public boolean write(String out){
-            if(outputStream == null){
-                return false;
-            }
-
-            try{
-                if(out != null){
-                    // Show sent message to the active activity
-                    sendMessage(MSG_WRITE, out);
-                    outputStream.write(out.getBytes());
-                } else {
-                    // This is a special case for the filler
-                    outputStream.write(0);
-                }
-                // End packet with a new line
-                outputStream.write('\n');
-                return true;
-            } catch (IOException e){
-                Log.e(TAG, "Could not write", e);
-            }
-            return false;
+            connectionThread = new ConnectionThread(socket);
+            connectionThread.run();
         }
 
         public void cancel(){
             try{
-                if(inputStream != null){
-                    inputStream.close();
-                }
-
-                if(outputStream != null){
-                    outputStream.close();
-                }
-
                 if (socket != null) {
                     socket.close();
                 }
@@ -247,6 +242,129 @@ public class BluetoothStreamApp extends Application {
                 }
             }
         }
+    };
+
+    private class AcceptThread extends Thread{
+        private final BluetoothServerSocket serverSocket;
+
+        public AcceptThread(){
+            BluetoothServerSocket tmp = null;
+            try{
+                String appName = getApplicationInfo().name;
+                tmp = bluetoothAdapter.listenUsingRfcommWithServiceRecord(appName, UUID.fromString(GENERAL_UUID));
+            } catch (IOException e){
+                Log.e(TAG, "Socket's listening() method failed", e);
+            }
+            serverSocket = tmp;
+        }
+
+        public void run(){
+            BluetoothSocket socket = null;
+            while(true){
+                try{
+                    socket = serverSocket.accept();
+                } catch (IOException e){
+                    Log.e(TAG, "Socket's accept() method failed",e);
+                    break;
+                }
+
+                if (socket != null){
+                    // TODO: PREFORM WORK ASSOCIATED WITH THE CONNECTION IN A SEPARATE THREAD
+
+                    try {
+                        serverSocket.close();
+                    } catch (IOException e) {
+                        Log.e(TAG,"Could not close server socket",e);
+                    }
+                    break;
+                }
+            }
+        }
+
+        public void cancel(){
+            try{
+                serverSocket.close();
+            } catch (IOException e){
+                Log.e(TAG, "Could not close the connection socket", e);
+            }
+        }
+    }
+
+    private class ConnectionThread extends Thread {
+        private final BluetoothSocket socket;
+        private final InputStream inputStream;
+        private final OutputStream outputStream;
+        private byte[] buffer;
+
+        public ConnectionThread(BluetoothSocket socket){
+            this.socket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+            // Get in/output streams
+            try {
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e){
+                Log.e(TAG, "Error when getting In/Output Streams",e);
+            }
+
+            inputStream = tmpIn;
+            outputStream = tmpOut;
+        }
+
+        public void run(){
+            buffer = new byte[1024];
+            int numBytes;
+
+            // Keep listening to the InputStream until an exception occurs
+            while(true){
+                try{
+                    // Read from InputStream
+                    numBytes = inputStream.read(buffer);
+                    // TODO: send obtained bytes to the UI activity
+                    Message readMsg = activityHandler.obtainMessage(
+                            MSG_READ, numBytes, -1, buffer
+                    );
+                    readMsg.sendToTarget();
+                } catch (IOException e){
+                    Log.d(TAG, "Input stream was disconnected", e);
+                    break;
+                }
+            }
+        }
+
+        public boolean write(byte[] bytes){
+            try{
+                outputStream.write(bytes);
+
+                // Shre the sent message with the UI activity
+                Message writtenMsg = activityHandler.obtainMessage(
+                        MSG_WRITE, -1, -1, buffer
+                );
+                writtenMsg.sendToTarget();
+                return true;
+            } catch(IOException e){
+                Log.e(TAG, "Error occured when sending data", e);
+
+                // Send a failure message back to the activity
+                Message writeErrorMsg = activityHandler.obtainMessage(MSG_TOAST);
+                Bundle bundle = new Bundle();
+                bundle.putString("toast","Couldn't send data to the other device");
+                writeErrorMsg.setData(bundle);
+                activityHandler.sendMessage(writeErrorMsg);
+            }
+            return false;
+        }
+
+        public void cancel(){
+            try{
+                socket.close();
+            } catch (IOException e){
+                Log.e(TAG, "Could not close the connection socket",e);
+            }
+        }
+
     }
 
     public boolean write(String out){
@@ -256,15 +374,15 @@ public class BluetoothStreamApp extends Application {
         }
         busy = true;
 
-        BluetoothThread r;
+        ConnectionThread r;
         synchronized(this){
             // Make sure the connection is live
             if(state != STATE_CONNECTED){
                 return false;
             }
-            r = bluetoothThread;
+            r = connectionThread;
         }
-        return r.write(out);
+        return connectionThread.write(out.getBytes());
     }
 
     /**
