@@ -50,6 +50,10 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
         // Register a receiver to handle Bluetooth actions
         registerReceiver(Receiver, new IntentFilter(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED));
 
+        // set bluetooth server
+        appState.setBluetoothAdapter(bluetoothAdapter);
+        appState.startServer();
+
         // set discoverability on
         bluetoothSwitch = (Switch) findViewById(R.id.switch_bluetooth);
         bluetoothSwitch.setOnCheckedChangeListener(switchChangeListener);
