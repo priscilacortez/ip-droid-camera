@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.Switch;
@@ -52,7 +53,6 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
 
         // set bluetooth server
         appState.setBluetoothAdapter(bluetoothAdapter);
-        appState.startServer();
 
         // set discoverability on
         bluetoothSwitch = (Switch) findViewById(R.id.switch_bluetooth);
@@ -112,6 +112,8 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
                 } else if(extras.get(key).equals(BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)){
                     bluetoothSwitch.setClickable(false);
                 }
+            } else if(BluetoothDevice.ACTION_FOUND.equals(action)) {
+                appState.startServer();
             }
         }
     };

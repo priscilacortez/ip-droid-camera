@@ -62,7 +62,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
         pairedDevicesList = new ArrayList<BluetoothDevice>();
         pairedDevicesListAdapter = new DeviceListBaseAdapter(this, pairedDevicesList);
         pairedDevicesListView.setAdapter(pairedDevicesListAdapter);
-        // TODO: ADD setOnItemClickListener
         pairedDevicesListView.setOnItemClickListener(deviceClickListener);
 
 
@@ -71,10 +70,8 @@ public class DeviceSelectActivity extends AppCompatActivity {
         availableDevicesSet = new HashSet<String>();
         availableDevicesListAdapter = new DeviceListBaseAdapter(this, availableDevicesList);
         availableDevicesListView.setAdapter(availableDevicesListAdapter);
-        // TODO: ADD setOnItemClickListener
         availableDevicesListView.setOnItemClickListener(deviceClickListener);
 
-        // TODO: Setup handler for setting up and managing bluetooth connections
         appState = (BluetoothStreamApp) getApplicationContext();
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -108,6 +105,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
                 scanDevices();
                 return true;
             case android.R.id.home:
+                appState.disconnect();
                 finish();
                 return true;
             default:
@@ -134,38 +132,9 @@ public class DeviceSelectActivity extends AppCompatActivity {
                     // TODO: LOGS
                 }
             });
-            System.out.println("DEVICE: " + device.getName());
             appState.connect(device);
         }
     };
-
-    public boolean handleMessage(Message msg){
-        // In cas the connection dialog hasn't disappeared yet
-        if(progressDialog != null){
-            progressDialog.dismiss();
-        }
-
-        switch(msg.what) {
-            case BluetoothStreamApp.MSG_OK:
-                // The child activity ended gracefully
-                break;
-            case BluetoothStreamApp.MSG_CANCEL:
-                // The child activity did not end gracefully (connection lost, failed... )
-                if (msg.obj != null) {
-                    // If some text came with the message show in a toast
-                    Toast.makeText(DeviceSelectActivity.this, (String) msg.obj, Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case BluetoothStreamApp.MSG_CONNECTED:
-                // When connected to a device start the activity select
-                // TODO: STREAM VIDEO!! startActivity...
-                startActivityForResult(new Intent(getApplicationContext(), SendVideoStreamActivity.class),0);
-                break;
-        }
-
-        return false;
-
-    }
 
     public void scanDevices(){
 
@@ -177,8 +146,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         }
 
         // Show search progress spinner
-        // TODO: Fix progress bar
-        setProgressBarIndeterminateVisibility(true);
+        // TODO: progress bar
 
         // Disable scan action button\
         scanActionButton.setTitle(getString(R.string.scanning));
@@ -256,22 +224,12 @@ public class DeviceSelectActivity extends AppCompatActivity {
 
                 scanActionButton.setTitle(getString(R.string.action_scan));
                 scanActionButton.setEnabled(true);
-            } /*else if(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)){
-                // Device had a change in discoverability
-                Bundle extras = intent.getExtras();
-                String key = extras.keySet().iterator().next();
-                // Check to see if it is no longer discoverable and then allow user to click on the switch again
-                if(extras.get(key).equals(BluetoothAdapter.SCAN_MODE_CONNECTABLE) || extras.get(key).equals(BluetoothAdapter.SCAN_MODE_NONE )){
-                    bluetoothSwitch.setClickable(true);
-                    bluetoothSwitch.performClick();
-                }
-            }*/
+            }
         }
     };
 
     protected void onDestroy(){
         super.onDestroy();
-
         unregisterReceiver(Receiver);
     }
 

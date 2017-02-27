@@ -110,6 +110,7 @@ public class BluetoothStreamApp extends Application {
      *TODO: COME BACK
      */
     public synchronized void connect(BluetoothDevice device){
+        Log.e(TAG, "IN APP STATE CONNECT DEVICE");
         stoppingConnection = false;
         busy = false;
 
@@ -272,6 +273,8 @@ public class BluetoothStreamApp extends Application {
                     // TODO: PREFORM WORK ASSOCIATED WITH THE CONNECTION IN A SEPARATE THREAD
 
                     try {
+                        connectionThread = new ConnectionThread(socket);
+                        connectionThread.run();
                         serverSocket.close();
                     } catch (IOException e) {
                         Log.e(TAG,"Could not close server socket",e);
@@ -314,6 +317,7 @@ public class BluetoothStreamApp extends Application {
         }
 
         public void run(){
+            Log.e(TAG,"IN RUN COMMUNICATION THREAD");
             buffer = new byte[1024];
             int numBytes;
 
@@ -395,6 +399,14 @@ public class BluetoothStreamApp extends Application {
             if(bluetoothThread != null){
                 bluetoothThread.cancel();
                 bluetoothThread = null;
+            }
+            if(acceptThread != null){
+                acceptThread.cancel();
+                acceptThread = null;
+            }
+            if(connectionThread != null){
+                connectionThread.cancel();
+                connectionThread = null;
             }
             setState(STATE_NONE);
             sendMessage(MSG_CANCEL, "Connection ended");
