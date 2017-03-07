@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -28,7 +29,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-public class DeviceSelectActivity extends AppCompatActivity {
+public class DeviceSelectActivity extends AppCompatActivity implements Handler.Callback {
 
     private ArrayList<BluetoothDevice> availableDevicesList, pairedDevicesList;
     private HashSet<String> availableDevicesSet;
@@ -39,9 +40,12 @@ public class DeviceSelectActivity extends AppCompatActivity {
     private DeviceListBaseAdapter pairedDevicesListAdapter;
     private DeviceListBaseAdapter availableDevicesListAdapter;
     private ProgressDialog progressDialog;
+    private boolean connected = false;
 
+    private static final int ACTION_LIST = 0;
     private final static int REQUEST_ENABLE_BT = 1;
     private final static int REQUEST_ACCESS_COARSE_LOCATION = 2;
+    private final static int STREAM_ACTION = 3;
     private String TAG = "Device Select Activity";
 
     @Override
@@ -115,6 +119,23 @@ public class DeviceSelectActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode){
+            case STREAM_ACTION:
+                Log.d(TAG, "Got result for: " + requestCode + " (Stream Action)");
+                // Send messages from parent to the handler
+                if(resultCode == BluetoothStreamApp.MSG_OK){
+                    Log.d(TAG,"Result for StreamAction is Okay. Activity ended well.");
+                    // Activity ended well
+                    connected = false;
+                    appState.disconnect();
+                }
+                break;
+        }
+    }
+
     final OnItemClickListener deviceClickListener = new OnItemClickListener() {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -129,7 +150,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
                 public void onCancel(DialogInterface dialog) {
                     progressDialog.dismiss();
                     appState.disconnect();
-                    // TODO: LOGS
                 }
             });
             appState.connect(device);
@@ -139,7 +159,6 @@ public class DeviceSelectActivity extends AppCompatActivity {
     public void scanDevices(){
 
         // Prevent phone without bluetooth from using application
-        Log.e(TAG, Boolean.toString(hasBluetooth()));
         if(!hasBluetooth()){
             finish();
             return;
@@ -232,6 +251,47 @@ public class DeviceSelectActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(Receiver);
     }
+
+    public boolean handleMessage(Message msg){
+        Log.d(TAG,"Handling a received message");
+        // In case the connection dialog hasn't disappeared yet
+        if(progressDialog != null){
+            progressDialog.dismiss();
+        }
+
+        switch(msg.what){
+            case BluetoothStreamApp.MSG_OK:
+                // The child activity ended gracefully
+                connected = false;
+                break;
+            case BluetoothStreamApp.MSG_CANCEL:
+                // The child activity did not end gracefully (connection lost, failed...)
+                if(msg.obj != null){
+                    // If some text came with the message show in a toast
+                    Toast.makeText(DeviceSelectActivity.this,(String) msg.obj, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case BluetoothStreamApp.MSG_CONNECTED:
+                if(!connected) {
+                    connected = true;
+                    String device_name = (String) msg.obj;
+                    Log.d(TAG,"Connected to: " + device_name);
+                    Toast.makeText(DeviceSelectActivity.this, "Connected to " + device_name, Toast.LENGTH_SHORT).show();
+                    // TODO: start camera activity
+                    Intent recordIntent = new Intent(getApplicationContext(), StreamActivity.class);
+                    startActivityForResult(recordIntent, STREAM_ACTION);
+                }
+        }
+        return false;
+
+    }
+
+    @Override
+    protected void onResume(){
+        appState.setActivityHandler(new Handler(this));
+        super.onResume();
+    }
+
 
 
 }

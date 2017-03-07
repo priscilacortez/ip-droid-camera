@@ -6,8 +6,14 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AlertDialog.Builder;
+import android.content.DialogInterface.OnClickListener;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -19,8 +25,9 @@ import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.Switch;
+import android.widget.Toast;
 
-public class AcceptVideoStreamActivity extends AppCompatActivity {
+public class AcceptVideoStreamActivity extends AppCompatActivity implements Handler.Callback{
 
     private Switch bluetoothSwitch;
     private BluetoothAdapter bluetoothAdapter;
@@ -64,6 +71,7 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case android.R.id.home:
                 unregisterReceiver(Receiver);
+                appState.disconnect();
                 finish();
                 return true;
             default:
@@ -82,6 +90,15 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
         if(requestCode == REQUEST_ENABLE_DISCOVERABILITY){
             if (resultCode != DISCOVERABILITY_TIME){
                 bluetoothSwitch.performClick();
+            } else {
+                progressDialog = ProgressDialog.show(AcceptVideoStreamActivity.this,"","Waiting for connection...",false, true);
+                progressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                    @Override
+                    public void onCancel(DialogInterface dialog) {
+                        progressDialog.dismiss();
+                        appState.disconnect();
+                    }
+                });
             }
         }
     }
@@ -101,7 +118,6 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            Log.e(TAG, action.toString());
             if(BluetoothAdapter.ACTION_SCAN_MODE_CHANGED.equals(action)){
                 Bundle extras = intent.getExtras();
                 String key = extras.keySet().iterator().next();
@@ -111,10 +127,44 @@ public class AcceptVideoStreamActivity extends AppCompatActivity {
                     bluetoothSwitch.performClick();
                 } else if(extras.get(key).equals(BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)){
                     bluetoothSwitch.setClickable(false);
+                    appState.startServer();
                 }
-            } else if(BluetoothDevice.ACTION_FOUND.equals(action)) {
-                appState.startServer();
             }
         }
     };
+
+    @Override
+    public boolean handleMessage(Message msg) {
+        // In case the connection dialog hasn't disappeared yet
+        if(progressDialog != null){
+            progressDialog.dismiss();
+        }
+
+        switch(msg.what){
+            case BluetoothStreamApp.MSG_OK:
+                Log.d(TAG,"Child activity ended gracefully");
+                break;
+            case BluetoothStreamApp.MSG_CANCEL:
+                Log.d(TAG,"Child activity did not end gracefully (connection lost, failed...)");
+                // The child activity did not end gracefully (connection lost, failed...)
+                if(msg.obj != null){
+                    // If some text came with the message show in a toast
+                    Toast.makeText(AcceptVideoStreamActivity.this,(String) msg.obj, Toast.LENGTH_SHORT).show();
+                }
+                bluetoothSwitch.setClickable(true);
+                bluetoothSwitch.performClick();
+                break;
+            case BluetoothStreamApp.MSG_CONNECTED:
+                String device_name = (String) msg.obj;
+                Log.d(TAG, "Connected to: " + device_name);
+                Toast.makeText(AcceptVideoStreamActivity.this, "Connected to " + device_name, Toast.LENGTH_SHORT).show();
+        }
+        return false;
+    }
+
+    @Override
+    protected void onResume(){
+        appState.setActivityHandler(new Handler(this));
+        super.onResume();
+    }
 }

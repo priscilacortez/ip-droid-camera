@@ -1,13 +1,31 @@
-<resources>
+<resources xmlns:xliff="http://schemas.android.com/tools">
     <string name="app_name">IP Droid Camera</string>
 
     <string name="selectDevice">Select a device to stream to</string>
     <string name="pairedDevices">Paired Devices</string>
     <string name="availableDevices">Available Devices</string>
     <string name="action_scan">Scan</string>
-    <string name="scanning">Scanning</string>
+    <string name="scanning">Scanning...</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="startClient">Stream Video</string>
     <string name="startServer">Watch Video</string>
+    <string name="bluetoothNotAvailable">Bluetooth is not available</string>
+
+    <string name="titleStreamingTo">Streaming to <xliff:g id="device_name">%1$s</xliff:g></string>
+    <string name="titleStreamingFrom">Streaming from <xliff:g id="device_name">%1$s</xliff:g></string>
+    <string name="titleConnecting">Connecting...</string>
+    <string name="titleNotConnected">Not Connected</string>
+
+    <string name="notConnected">You are not connected.</string>
+    <string name="noBluetooth">Bluetooth was not enabled. Leaving Video Stream.</string>
+
+    <string name="startRecording">Start Recording</string>
+    <string name="stopRecording">End Recording</string>
+
+    <string name="title_activity_camera">CameraActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+
+    <string name="title_activity_fullscreen">FullscreenActivity</string>
 </resources>

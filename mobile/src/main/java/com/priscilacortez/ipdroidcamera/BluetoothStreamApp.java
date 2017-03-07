@@ -12,10 +12,12 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
+import android.content.DialogInterface;
 import android.icu.util.Output;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 
 public class BluetoothStreamApp extends Application {
@@ -82,6 +84,7 @@ public class BluetoothStreamApp extends Application {
     * @param value: Optional object to attach to message
     */
     private synchronized void sendMessage(int type, Object value){
+        Log.d(TAG,"Sending message of type: " + type);
         if(activityHandler != null){
             activityHandler.obtainMessage(type, value).sendToTarget();
         }
@@ -107,10 +110,9 @@ public class BluetoothStreamApp extends Application {
      * Start the ConnectionThread to initiate a connection to a remote device
      * @param device
      *              The BluetoothDevice to connect
-     *TODO: COME BACK
      */
     public synchronized void connect(BluetoothDevice device){
-        Log.e(TAG, "IN APP STATE CONNECT DEVICE");
+        Log.d(TAG,"Connecting to: " + device.getName());
         stoppingConnection = false;
         busy = false;
 
@@ -124,12 +126,13 @@ public class BluetoothStreamApp extends Application {
         bluetoothThread.start();
 
         // Start the timeout thread to check the connecting status
-        timeoutThread = new TimeoutThread();
-        timeoutThread.start();
+        //timeoutThread = new TimeoutThread();
+        //timeoutThread.start();
 
     }
 
     public synchronized void startServer(){
+        Log.d(TAG,"Starting server");
         stoppingConnection = false;
         busy = false;
 
@@ -150,6 +153,11 @@ public class BluetoothStreamApp extends Application {
         if(acceptThread != null){
             acceptThread.cancel();
             acceptThread = null;
+        }
+
+        if(connectionThread != null){
+            connectionThread.cancel();
+            connectionThread = null;
         }
     }
 
@@ -174,6 +182,7 @@ public class BluetoothStreamApp extends Application {
         }
 
         public void run(){
+            Log.d(TAG,"BluetoothThread starting");
             // Connect to socket
             try {
                 socket.connect();
@@ -194,10 +203,9 @@ public class BluetoothStreamApp extends Application {
             // Connected
             setState(STATE_CONNECTED);
             // Send message to activity to inform of success
-            sendMessage(MSG_CONNECTED, null);
+            sendMessage(MSG_CONNECTED, socket.getRemoteDevice().getName());
 
             // Keep listening to the InputStream while connected
-            // TODO: HERE I WANT SEND STUFF INSTEAD OF READING IT
             connectionThread = new ConnectionThread(socket);
             connectionThread.run();
         }
@@ -224,7 +232,7 @@ public class BluetoothStreamApp extends Application {
                 synchronized (BluetoothStreamApp.this){
                     // Filler hash to confirm communication with device when idle
                     if(System.currentTimeMillis() - lastComm > minCommInterval && !busy && state == STATE_CONNECTED){
-                        write(null);
+                         write(null);
                     }
 
                     // Communication timed out
@@ -260,6 +268,7 @@ public class BluetoothStreamApp extends Application {
         }
 
         public void run(){
+            Log.d(TAG,"AcceptThread starting");
             BluetoothSocket socket = null;
             while(true){
                 try{
@@ -317,12 +326,14 @@ public class BluetoothStreamApp extends Application {
         }
 
         public void run(){
-            Log.e(TAG,"IN RUN COMMUNICATION THREAD");
+            Log.d(TAG,"ConnectionThread started");
+            sendMessage(MSG_CONNECTED, socket.getRemoteDevice().getName());
             buffer = new byte[1024];
             int numBytes;
 
             // Keep listening to the InputStream until an exception occurs
             while(true){
+                Log.d(TAG,"Listening to inputStream");
                 try{
                     // Read from InputStream
                     numBytes = inputStream.read(buffer);
@@ -333,6 +344,7 @@ public class BluetoothStreamApp extends Application {
                     readMsg.sendToTarget();
                 } catch (IOException e){
                     Log.d(TAG, "Input stream was disconnected", e);
+                    disconnect();
                     break;
                 }
             }
@@ -342,14 +354,13 @@ public class BluetoothStreamApp extends Application {
             try{
                 outputStream.write(bytes);
 
-                // Shre the sent message with the UI activity
+                // Share the sent message with the UI activity
                 Message writtenMsg = activityHandler.obtainMessage(
                         MSG_WRITE, -1, -1, buffer
                 );
                 writtenMsg.sendToTarget();
                 return true;
             } catch(IOException e){
-                Log.e(TAG, "Error occured when sending data", e);
 
                 // Send a failure message back to the activity
                 Message writeErrorMsg = activityHandler.obtainMessage(MSG_TOAST);
@@ -386,13 +397,14 @@ public class BluetoothStreamApp extends Application {
             }
             r = connectionThread;
         }
-        return connectionThread.write(out.getBytes());
+        return r.write(out.getBytes());
     }
 
     /**
      * Stop all threads
      */
     public synchronized void disconnect(){
+        Log.d(TAG,"Disconnecting");
         // Do not stop twice
         if(!stoppingConnection){
             stoppingConnection = true;
@@ -412,5 +424,16 @@ public class BluetoothStreamApp extends Application {
             sendMessage(MSG_CANCEL, "Connection ended");
         }
     }
+
+    private final DialogInterface.OnClickListener dialogClickListener = new DialogInterface.OnClickListener(){
+
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            switch(which){
+                case DialogInterface.BUTTON_POSITIVE:
+
+            }
+        }
+    };
 
 }

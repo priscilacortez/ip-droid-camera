@@ -5,4 +5,6 @@
 
     <dimen name="horizontal_padding">12dp</dimen>
     <dimen name="vertical_padding">16dp</dimen>
+
+    <dimen name="record_icon_size">70dp</dimen>
 </resources>

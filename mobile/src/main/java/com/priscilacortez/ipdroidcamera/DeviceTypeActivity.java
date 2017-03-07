@@ -20,7 +20,7 @@ public class DeviceTypeActivity extends AppCompatActivity {
 
         clientButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                Intent clientIntent = new Intent(DeviceTypeActivity.this, AcceptVideoStreamActivity.class);
+                Intent clientIntent = new Intent(DeviceTypeActivity.this, DeviceSelectActivity.class);
                 DeviceTypeActivity.this.startActivity(clientIntent);
             }
         });
@@ -28,7 +28,7 @@ public class DeviceTypeActivity extends AppCompatActivity {
         serverButton.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent serverIntent = new Intent(DeviceTypeActivity.this, DeviceSelectActivity.class);
+                Intent serverIntent = new Intent(DeviceTypeActivity.this, AcceptVideoStreamActivity.class);
                 DeviceTypeActivity.this.startActivity(serverIntent);
             }
         });
