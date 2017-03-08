@@ -8,8 +8,6 @@
     android:orientation="vertical"
     tools:context="com.priscilacortez.ipdroidcamera.DeviceTypeActivity">
 
-    <include layout="@layout/toolbar" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

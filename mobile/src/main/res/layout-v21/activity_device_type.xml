@@ -8,17 +8,6 @@
     android:orientation="vertical"
     tools:context="com.priscilacortez.ipdroidcamera.DeviceTypeActivity">
 
-    <android.support.v7.widget.Toolbar
-
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@color/colorPrimary"
-        android:elevation="4dp"
-        android:theme="@style/ToolbarThemeDark"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"
-        app:title="@string/app_name"/>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

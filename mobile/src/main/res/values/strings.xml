@@ -28,4 +28,6 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
 
     <string name="title_activity_fullscreen">FullscreenActivity</string>
+
+    <string name="title_activity_fullscreen_stream">FullscreenStreamActivity</string>
 </resources>

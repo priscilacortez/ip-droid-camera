@@ -44,9 +44,7 @@ public class AcceptVideoStreamActivity extends AppCompatActivity implements Hand
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_accept_video_stream);
 
-        // Set the toolbar
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        // Set the actionbar
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 

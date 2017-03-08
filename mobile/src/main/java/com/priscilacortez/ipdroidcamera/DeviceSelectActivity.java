@@ -278,7 +278,7 @@ public class DeviceSelectActivity extends AppCompatActivity implements Handler.C
                     Log.d(TAG,"Connected to: " + device_name);
                     Toast.makeText(DeviceSelectActivity.this, "Connected to " + device_name, Toast.LENGTH_SHORT).show();
                     // TODO: start camera activity
-                    Intent recordIntent = new Intent(getApplicationContext(), StreamActivity.class);
+                    Intent recordIntent = new Intent(getApplicationContext(), FullscreenStreamActivity.class);
                     startActivityForResult(recordIntent, STREAM_ACTION);
                 }
         }

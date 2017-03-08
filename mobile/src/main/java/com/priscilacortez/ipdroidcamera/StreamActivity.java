@@ -47,14 +47,13 @@ public class StreamActivity extends AppCompatActivity implements CameraBridgeVie
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.e(TAG,"ON CREATE");
         // Launch when the activity is created
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_stream);
 
         // Create toolbar
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
@@ -118,6 +117,7 @@ public class StreamActivity extends AppCompatActivity implements CameraBridgeVie
         if (openCvCameraView != null){
             openCvCameraView.disableView();
         }
+        Log.e(TAG,"DESTROYED");
     }
 
     @Override
@@ -190,17 +190,4 @@ public class StreamActivity extends AppCompatActivity implements CameraBridgeVie
 
         return inputFrame.rgba();
     }
-
-    private BaseLoaderCallback loaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status){
-                case LoaderCallbackInterface.SUCCESS:
-                    openCvCameraView.enableView();
-                    break;
-                default:
-                    super.onManagerConnected(status);
-            }
-        }
-    };
 }

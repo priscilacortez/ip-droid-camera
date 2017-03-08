@@ -6,6 +6,7 @@ import java.util.List;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Build;
@@ -18,6 +19,8 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+
+import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
 
 /**
  * This class is an implementation of the Bridge View between OpenCV and Java Camera.
@@ -199,8 +202,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     /* Finally we are ready to start the preview */
                     Log.d(TAG, "startPreview");
-                    setDisplayOrientation(mCamera,90);
-                    mCamera.setPreviewDisplay(getHolder());
+//                    if(getResources().getConfiguration().orientation == ORIENTATION_PORTRAIT){
+//                        setDisplayOrientation(mCamera,90);
+//                        mCamera.setPreviewDisplay(getHolder());
+//                    }
                     mCamera.startPreview();
                 }
                 else
@@ -270,7 +275,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             synchronized (this) {
                 this.notify();
             }
-            Log.d(TAG, "Wating for thread");
+            Log.d(TAG, "Waiting for thread");
             if (mThread != null)
                 mThread.join();
         } catch (InterruptedException e) {
